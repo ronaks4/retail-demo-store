@@ -549,6 +549,10 @@ Outputs:
     Description: Products load balancer URL.
     Value: !GetAtt ProductsService.Outputs.ServiceUrl
 
+  ProductsServiceDNSName:
+    Description: Products load balancer URL.
+    Value: !GetAtt ProductsService.Outputs.ServiceDNSName
+
   UsersServiceUrl:
     Description: Users load balancer URL.
     Value: !GetAtt UsersService.Outputs.ServiceUrl

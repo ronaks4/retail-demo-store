@@ -8,6 +8,9 @@ Parameters:
   CleanupBucketLambdaArn:
     Type: String
     Description: Lambda Arn for cleanup function
+  ProductsServiceDNSName:
+    Type: String
+    Description: DNS Name for the product service LB
 
 Conditions:
   IADRegion: !Equals [!Ref "AWS::Region", "us-east-1"]
@@ -68,6 +71,18 @@ Resources:
             S3OriginConfig:
               OriginAccessIdentity: !Sub >-
                 origin-access-identity/cloudfront/${WebUIBucketOriginAccessIdentity}
+          - DomainName: !Ref ProductsServiceDNSName
+            Id: ProductServiceOrigin
+            CustomOriginConfig:
+              HTTPPort: 80
+              HTTPSPort: 443
+              OriginProtocolPolicy: match-viewer
+        CacheBehaviors:
+          Items:
+          - CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            PathPattern: /products/*
+            TargetOriginId: ProductServiceOrigin
+            ViewerProtocolPolicy: allow-all
         DefaultCacheBehavior:
           TargetOriginId: S3
           ViewerProtocolPolicy: allow-all

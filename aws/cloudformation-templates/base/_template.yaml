@@ -295,14 +295,6 @@ Resources:
     Properties:
       TemplateURL: !Sub https://s3.amazonaws.com/${ResourceBucket}/${ResourceBucketRelativePath}cloudformation-templates/base/pinpoint.yaml
 
-  # CloudFront CDN
-  CloudFront:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: !Sub https://s3.amazonaws.com/${ResourceBucket}/${ResourceBucketRelativePath}cloudformation-templates/base/cloudfront.yaml
-      Parameters:
-        CleanupBucketLambdaArn: !Ref CleanupBucketLambdaArn
-
   # Personalize Resources
   Personalize:
     Type: AWS::CloudFormation::Stack

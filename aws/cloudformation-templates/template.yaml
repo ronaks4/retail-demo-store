@@ -3,7 +3,7 @@ AWSTemplateFormatVersion: 2010-09-09
 
 # Do NOT remove the RETAIL_DS prefix in the template description below!
 Description: >
-  RETAIL_DS: This template deploys the Retail Demo Store reference architecture and workshop notebooks. (uksb-1t80l2nq1)
+  RETAIL_DS: This template deploys the Retail Demo Store reference architecture and workshop notebooks.
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -567,6 +567,15 @@ Resources:
         EvidentlyProjectName: !GetAtt Base.Outputs.EvidentlyProjectName
         ACMCertARN: !GetAtt Base.Outputs.ACMCertARN
 
+  # CloudFront CDN
+  CloudFront:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${ResourceBucket}/${ResourceBucketRelativePath}cloudformation-templates/cloudfront.yaml
+      Parameters:
+        CleanupBucketLambdaArn: !Ref CleanupBucketLambdaArn
+        ProductServiceDNS: !GetAtt Services.Outputs.ProductsServiceDNSName
+  
   # Web UI Pipeline
   WebUIPipeline:
     Type: AWS::CloudFormation::Stack
