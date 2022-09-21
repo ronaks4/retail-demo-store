@@ -725,6 +725,21 @@ Resources:
         AmazonPayMerchantId: !Ref AmazonPayMerchantId
         AlexaAmazonPayDefaultSandboxEmail: !Ref AlexaAmazonPayDefaultSandboxEmail
 
+  CloudFrontServices:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${ResourceBucket}/${ResourceBucketRelativePath}cloudformation-templates/update-cloudfront-distribution.yaml
+      Parameters:
+        CloudFrontDistributionName: !GetAtt Base.Outputs.WebUICDN
+        ProductsServiceDNSName: !GetAtt Services.Outputs.ProductsServiceDNSName
+        UsersServiceDNSName: !GetAtt Services.Outputs.UsersServiceDNSName
+        CartsServiceDNSName: !GetAtt Services.Outputs.CartsServiceDNSName
+        OrdersServiceDNSName: !GetAtt Services.Outputs.OrdersServiceDNSName
+        LocationServiceDNSName: !GetAtt Services.Outputs.LocationServiceDNSName
+        RecommendationsServiceDNSName: !GetAtt Services.Outputs.RecommendationsServiceDNSName
+        VideosServiceDNSName: !GetAtt Services.Outputs.VideosServiceDNSName
+        SearchServiceDNSName: !GetAtt Services.Outputs.SearchServiceDNSName
+        OffersServiceDNSName: !GetAtt Services.Outputs.OffersServiceDNSName
   # Deployment support
   DeploymentSupport:
     DependsOn: [Services, Base] # Delay towards end of deployment so that ES domain and DNS changes become consistent

@@ -1,0 +1,260 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: >
+    Updates cloud front distributions to include services
+    Author: Sapeksh Madan <sapmadan@amazon.com>
+
+Parameters:
+  CloudFrontDistribution: 
+    Type: String
+    Description: "Name of the cloud front distribution to be updated"
+  ProductsServiceDNSName:
+    Type: String
+    Description: "DNS name of the product service ELB"
+  UsersServiceDNSName:
+    Type: String
+    Description: "DNS name of the user service ELB"
+  CartsServiceDNSName:
+    Type: String
+    Description: "DNS name of the carts service ELB"
+  OrdersServiceDNSName:
+    Type: String
+    Description: "DNS name of the orders service ELB"
+  LocationServiceDNSName:
+    Type: String
+    Description: "DNS name of the location service ELB"
+  RecommendationsServiceDNSName:
+    Type: String
+    Description: "DNS name of the recommendation service ELB"
+  VideosServiceDNSName:
+    Type: String
+    Description: "DNS name of the video service ELB"
+  SearchServiceDNSName:
+    Type: String
+    Description: "DNS name of the search service ELB"
+  OffersServiceDNSName:
+    Type: String
+    Description: "DNS name of the offers service ELB"
+  
+Resources:
+  UpdateCloudFrontDistributionLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+      Path: /
+      Policies:
+        - PolicyName: CustomPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogStream
+                - logs:CreateLogGroup
+                - logs:DescribeLogStreams
+                - logs:PutLogEvents
+              Resource:
+                - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:*'                
+            - Effect: Allow
+              Action:
+                - cloudfront:GetDistribution
+                - cloudfront:GetDistributionConfig
+                - cloudfront:UpdateDistribution
+              Resource:
+                - "*"
+  UpdateCloudFrontDistributionLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_handler
+      Runtime: python3.9
+      Role: !GetAtt UpdateCloudFrontDistributionLambdaRole.Arn
+      Architectures:
+        - x86_64
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          import boto3
+          import cfnresponse
+
+          client = boto3.client("cloudfront")
+          response_data = {}
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+
+          def define_new_distribution_config(path_patterns_list):
+              origins_list = []
+              cache_behaviors_list = []
+
+              for item in path_patterns_list:
+                  origin_dns_name = item["DnsName"]
+                  path_pattern = item["PathPatten"]
+
+                  new_custom_origin_config = {
+                      "Id": origin_dns_name,
+                      "DomainName": origin_dns_name,
+                      "OriginPath": "",
+                      "CustomHeaders": {"Quantity": 0},
+                      "CustomOriginConfig": {
+                          "HTTPPort": 80,
+                          "HTTPSPort": 443,
+                          "OriginProtocolPolicy": "match-viewer",
+                          "OriginSslProtocols": {
+                              "Quantity": 3,
+                              "Items": ["SSLv3", "TLSv1.1", "TLSv1.2"],
+                          },
+                          "OriginReadTimeout": 30,
+                          "OriginKeepaliveTimeout": 5,
+                      },
+                  }
+                  origins_list.append(new_custom_origin_config)
+
+                  new_cache_behavior = {
+                      "PathPattern": path_pattern,
+                      "TargetOriginId": origin_dns_name,
+                      "ViewerProtocolPolicy": "allow-all",
+                      "SmoothStreaming": False,
+                      "Compress": False,
+                      "AllowedMethods": {
+                          "Quantity": 7,
+                          "Items": [
+                                  "HEAD",
+                                  "DELETE",
+                                  "POST",
+                                  "OPTIONS",
+                                  "GET",
+                                  "PUT",
+                                  "PATCH",
+                              ],
+                            "CachedMethods": {
+                              "Quantity": 3,
+                              "Items": [
+                                  "HEAD",
+                                  "OPTIONS",
+                                  "GET",
+                              ],
+                          },
+                      },
+                      "LambdaFunctionAssociations": {"Quantity": 0},
+                      "FunctionAssociations": {"Quantity": 0},
+                      "FieldLevelEncryptionId": "",
+                      "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+                  }
+                  cache_behaviors_list.append(new_cache_behavior)
+
+              return origins_list, cache_behaviors_list
+
+
+          ###
+          ### Get parameters from the input event
+          ###
+          def get_input_parameters(event):
+              distribution_name = ''
+              path_patterns_list = []
+              if (
+                  "CloudFrontDistributionName" in event["ResourceProperties"]
+                  and "OriginsPathPatternList" in event["ResourceProperties"]
+              ):
+
+                  distribution_name = event["ResourceProperties"]["CloudFrontDistributionName"]
+                  path_patterns_list = event["ResourceProperties"]["OriginsPathPatternList"]
+              else:
+                  logger.error("Invalid input paremeters")
+                  # add code to throw exception
+              return distribution_name, path_patterns_list
+
+
+          def lambda_handler(event, context):
+              logger.info("Received event: %s" % json.dumps(event))
+              response_status = cfnresponse.FAILED
+              distribution_name, path_patterns_list = get_input_parameters(event)
+              if event["RequestType"] == "Create":
+                  response = client.get_distribution(Id=distribution_name)
+                  origin_list, cache_behaviors_list = define_new_distribution_config(
+                      path_patterns_list
+                  )
+
+                  # Get distribution config and add new entries
+                  dist_config = response["Distribution"]["DistributionConfig"]
+
+                  # Update origins in distribution config
+                  current_origins_quantity = dist_config["Origins"]["Quantity"]
+                  dist_config["Origins"]["Quantity"] = current_origins_quantity + len(origin_list)
+
+                  # If origin items exist, extent the currest list, else
+                  # set it up as the new origin list
+                  if "Items" in dist_config["Origins"]:
+                      dist_config["Origins"]["Items"].extend(origin_list)
+                  else:
+                      dist_config["Origins"]["Items"] = origin_list
+
+                  # Update cache behaviors for quantity and items
+                  # If origin items exist, extent the currest list, else
+                  # set it up as the new origin list
+                  current_cache_behaviors_quantity = dist_config["CacheBehaviors"]["Quantity"]
+                  dist_config["CacheBehaviors"][
+                      "Quantity"
+                  ] = current_cache_behaviors_quantity + len(cache_behaviors_list)
+
+                  if "Items" in dist_config["CacheBehaviors"]:
+                      dist_config["CacheBehaviors"]["Items"].extend(cache_behaviors_list)
+                  else:
+                      dist_config["CacheBehaviors"]["Items"] = cache_behaviors_list
+
+                  # Update cloud front distribution. It requires etag from the get config
+                  # and the distribution ID.
+                  dist_id = response["Distribution"]["Id"]
+                  etag = response["ETag"]
+                  logger.info("Updated distribution configs: %s" % json.dumps(dist_config))
+                  update_response = client.update_distribution(
+                      Id=dist_id, IfMatch=etag, DistributionConfig=dist_config
+                  )
+                  logger.info(
+                      "Update distribution config response: %s" % str(update_response)
+                  )
+                  response_status = cfnresponse.SUCCESS
+                  response_data["Message"] = "Resource creation succeeded"
+              else:
+                  response_status = cfnresponse.FAILED
+                  response_data[
+                      "Message"
+                  ] = "Resource creation failed, all parameters not provided"
+              cfnresponse.send(event, context, response_status, response_data)
+
+  UpdateCloudFrontDistributionLambdaInvoke:
+    Type: AWS::CloudFormation::CustomResource
+    Version: "1.0"
+    Properties:
+        CloudFrontDistributionName: !Ref CloudFrontDistribution
+        OriginsPathPatternList: 
+          - DnsName: !Ref  ProductsServiceDNSName
+            PathPattern: "/path1"
+          - DnsName: !Ref  UsersServiceDNSName
+            PathPattern: "/path1"
+          - DnsName: !Ref  CartsServiceDNSName
+            PathPattern: "/path1"
+          - DnsName: !Ref  OrdersServiceDNSName
+            PathPattern: "/path1"
+          - DnsName: !Ref  LocationServiceDNSName
+            PathPattern: "/path1"
+          - DnsName: !Ref  RecommendationsServiceDNSName
+            PathPattern: "/path1"
+          - DnsName: !Ref  VideosServiceDNSName
+            PathPattern: "/path1"
+          - DnsName: !Ref  SearchServiceDNSName
+            PathPattern: "/path1"
+          - DnsName: !Ref  OffersServiceDNSName
+            PathPattern: "/path1"
+  
+Outputs:
+  # Web UI outputs
+  UpdateCFNLambdaFunction:
+    Description: Update cloud front distribution lambda name
+    Value: !Ref UpdateCloudFrontDistributionLambdaFunction
