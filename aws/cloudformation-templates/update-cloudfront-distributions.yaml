@@ -232,26 +232,27 @@ Resources:
     Type: AWS::CloudFormation::CustomResource
     Version: "1.0"
     Properties:
+        ServiceToken: !GetAtt UpdateCloudFrontDistributionLambdaFunction.Arn
         CloudFrontDistributionName: !Ref CloudFrontDistribution
         OriginsPathPatternList: 
           - DnsName: !Ref  ProductsServiceDNSName
-            PathPattern: "/path1"
+            PathPattern: "/products/*"
           - DnsName: !Ref  UsersServiceDNSName
-            PathPattern: "/path1"
+            PathPattern: "/users/*"
           - DnsName: !Ref  CartsServiceDNSName
-            PathPattern: "/path1"
+            PathPattern: "/carts/*"
           - DnsName: !Ref  OrdersServiceDNSName
-            PathPattern: "/path1"
+            PathPattern: "/orders*"
           - DnsName: !Ref  LocationServiceDNSName
-            PathPattern: "/path1"
+            PathPattern: "/location/*"
           - DnsName: !Ref  RecommendationsServiceDNSName
-            PathPattern: "/path1"
+            PathPattern: "/related*"
           - DnsName: !Ref  VideosServiceDNSName
-            PathPattern: "/path1"
+            PathPattern: "/videos*"
           - DnsName: !Ref  SearchServiceDNSName
-            PathPattern: "/path1"
+            PathPattern: "/search/*"
           - DnsName: !Ref  OffersServiceDNSName
-            PathPattern: "/path1"
+            PathPattern: "/offers*"
   
 Outputs:
   # Web UI outputs
