@@ -64,7 +64,6 @@ dataset_group_name_offers = 'retaildemostore-offers'
 role_arn = os.environ['PersonalizeRoleArn']
 create_personalize_resources = os.environ.get('PreCreatePersonalizeResources', 'no').strip().lower() in ['yes', 'true', '1']
 create_deploy_offers_campaign = os.environ['DeployPersonalizedOffersCampaign'].strip().lower() in ['yes', 'true', '1']
-create_campaign_for_pinpoint = os.environ.get('PreCreatePinpointWorkshop', 'no').strip().lower() in ['yes', 'true', '1']
 
 datasetgroup_name_param = 'retaildemostore-personalize-datasetgroup-name'
 
@@ -103,6 +102,10 @@ items_schema = {
             "name": "GENDER",
             "type": "string",
             "categorical": True
+        },
+        {
+            "name": "PROMOTED",
+            "type": "string"
         }
     ],
     "version": "1.0"
@@ -238,6 +241,18 @@ dataset_group_confs = [
                 'expression': 'EXCLUDE ItemID WHERE INTERACTIONS.event_type IN ("Purchase") | INCLUDE ItemID WHERE ITEMS.CATEGORY_L1 IN ($CATEGORIES)',
                 'param': '/retaildemostore/personalize/filters/filter-include-categories-arn',
                 'paramDescription': 'Retail Demo Store Filter to Include by Categories Arn Parameter'
+            },
+            {
+                'name': 'retaildemostore-filter-promoted-items',
+                'expression': 'EXCLUDE ItemID WHERE INTERACTIONS.event_type IN ("Purchase") | INCLUDE ItemID WHERE ITEMS.PROMOTED IN ("Y")',
+                'param': '/retaildemostore/personalize/filters/promoted-items-filter-arn',
+                'paramDescription': 'Retail Demo Store Promotional Filter to Include Promoted Items Arn Parameter'
+            },
+            {
+                'name': 'retaildemostore-filter-promoted-items-no-cstore',
+                'expression': 'EXCLUDE ItemID WHERE INTERACTIONS.event_type IN ("Purchase") | INCLUDE ItemID WHERE ITEMS.PROMOTED IN ("Y") AND ITEMS.CATEGORY_L1 NOT IN ("cold dispensed", "hot dispensed", "salty snacks", "food service")',
+                'param': '/retaildemostore/personalize/filters/promoted-items-no-cstore-filter-arn',
+                'paramDescription': 'Retail Demo Store Promotional Filter to Include Promoted Non-CStore Items Arn Parameter'
             }
         ],
         'recommenders': [
@@ -282,24 +297,6 @@ dataset_group_confs = [
         ]
     }
 ]
-
-# Since the Pinpoint integration with Personalize requires a Personalize campaign, the
-# following logic adds an additional solution and campaign for this purpose. In this
-# case we're only adding this configuration if the Pinpoint auto-workshop was enabled
-# at deployment time. Otherwise, we can skip it here and let the user create it conditionally
-# in the Pinpoint workshop. Once Pinpoint adds support for recommenders, the following logic
-# can be removed and the Pinpoint workshop can use the RFY recommender.
-if create_campaign_for_pinpoint:
-    dataset_group_confs[0]['solutions'].append({
-        'name': 'retaildemostore-user-personalization',
-        'recipe': 'arn:aws:personalize:::recipe/aws-user-personalization',
-        'eventType': 'View',
-        'campaign': {
-            'name': 'retaildemostore-user-personalization',
-            'param': '/retaildemostore/personalize/user-personalization-arn',
-            'paramDescription': 'Retail Demo Store User Personalization Campaign Arn Parameter'
-        }
-    })
 
 if create_deploy_offers_campaign:
     dataset_group_confs.append({
@@ -458,7 +455,7 @@ def create_solution_version(dataset_group_arn: str, solution_conf: Dict) -> Tupl
             # Find first solution version matching the status in the following order.
             statuses = [ 'ACTIVE', 'CREATE PENDING', 'CREATE IN_PROGRESS', 'CREATE FAILED' ]
             for status in statuses:
-                if len(solution_versions_by_status.get(status)) > 0:
+                if status in solution_versions_by_status and len(solution_versions_by_status.get(status)) > 0:
                     solution_version = solution_versions_by_status[status][0]
                     logger.info('Using %s as solutionVersionArn with status of %s for solution %s', solution_version['solutionVersionArn'], solution_version['status'], solution_conf['arn'])
                     solution_conf['solutionVersionArn'] = solution_version['solutionVersionArn']
@@ -760,9 +757,16 @@ def update() -> bool:
         # Create filters
         all_filters_active = True
         for filter_conf in dataset_group_conf.get('filters', []):
-            _,filter_created = create_filter(dataset_group_conf['arn'], filter_conf)
-            if filter_created or filter_conf['status'] != 'ACTIVE':
-                all_filters_active = False
+            try:
+                _,filter_created = create_filter(dataset_group_conf['arn'], filter_conf)
+                if filter_created or filter_conf['status'] != 'ACTIVE':
+                    all_filters_active = False
+            except ClientError as e:
+                if e.response['Error']['Code'] == 'LimitExceededException':
+                    logger.warn('Too many filters being created; backing off and retrying...')
+                    break
+                else:
+                    raise e
 
         if all_recs_active and all_svs_active and all_campaigns_active and event_tracker_active and all_filters_active:
             # All resources are active for the DSG. Set SSM params for filters, recommenders, and campaigns
