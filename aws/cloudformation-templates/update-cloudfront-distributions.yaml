@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: 2010-09-09
 
 Description: >
     Updates cloud front distributions to include services
-    Author: Sapeksh Madan <sapmadan@amazon.com>
+    Author: Ronak Shah <ronakbsh@amazon.com>
 
 Parameters:
   CloudFrontDistribution: 
@@ -95,7 +95,7 @@ Resources:
 
               for item in path_patterns_list:
                   origin_dns_name = item["DnsName"]
-                  path_pattern = item["PathPatten"]
+                  path_pattern = item["PathPattern"]
 
                   new_custom_origin_config = {
                       "Id": origin_dns_name,
