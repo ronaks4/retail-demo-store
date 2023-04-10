@@ -729,7 +729,7 @@ Resources:
     Properties:
       TemplateURL: !Sub https://s3.amazonaws.com/${ResourceBucket}/${ResourceBucketRelativePath}cloudformation-templates/update-cloudfront-distributions.yaml
       Parameters:
-        CloudFrontDistributionName: !GetAtt Base.Outputs.WebUICDN
+        CloudFrontDistribution: !GetAtt Base.Outputs.WebUICDN
         ProductsServiceDNSName: !GetAtt Services.Outputs.ProductsServiceDNSName
         UsersServiceDNSName: !GetAtt Services.Outputs.UsersServiceDNSName
         CartsServiceDNSName: !GetAtt Services.Outputs.CartsServiceDNSName
