@@ -61,10 +61,7 @@ Parameters:
 
   IdentityPoolId:
     Type: String
-
-  StackBucketName:
-    Type: String
-
+    
   Subnets:
     Type: String
 
@@ -96,6 +93,14 @@ Parameters:
     Type: String
     Default: none
 
+  CartsTable:
+    Type: String
+    Default: none
+
+  OrdersTable:
+    Type: String
+    Default: none
+
   ExperimentStrategyTable:
     Type: String
     Default: none
@@ -123,10 +128,6 @@ Parameters:
   UseDefaultIVSStreams:
     Type: String
     Description: Whether to use created IVS streams or those hosted by AWS.
-
-  ParentStackName:
-    Type: String
-    Description: Parent stack name
 
   EvidentlyProjectName:
     Type: String
@@ -158,7 +159,6 @@ Resources:
         UserPoolId: !Ref UserPoolId
         UserPoolClientId: !Ref UserPoolClientId
         IdentityPoolId: !Ref IdentityPoolId
-        StackBucketName: !Ref StackBucketName
         Subnets: !Ref Subnets
         VpcId: !Ref VpcId
         VpcCidr: !Ref VpcCidr
@@ -174,7 +174,6 @@ Resources:
         DeleteRepositoryLambdaArn: !GetAtt DeleteRepositoryLambdaFunction.Arn
         WebRootUrl: !Ref WebRootUrl
         ImageRootUrl: !Ref ImageRootUrl
-        Uid: !Sub ${ParentStackName}-${AWS::Region}
         EvidentlyProjectName: !Ref EvidentlyProjectName
         LoggingBucketName: !Ref LoggingBucketName
 
@@ -195,7 +194,6 @@ Resources:
         UserPoolId: !Ref UserPoolId
         UserPoolClientId: !Ref UserPoolClientId
         IdentityPoolId: !Ref IdentityPoolId
-        StackBucketName: !Ref StackBucketName
         Subnets: !Ref Subnets
         VpcId: !Ref VpcId
         VpcCidr: !Ref VpcCidr
@@ -209,7 +207,6 @@ Resources:
         DeleteRepositoryLambdaArn: !GetAtt DeleteRepositoryLambdaFunction.Arn
         WebRootUrl: !Ref WebRootUrl
         ImageRootUrl: !Ref ImageRootUrl
-        Uid: !Sub ${ParentStackName}-${AWS::Region}
         EvidentlyProjectName: !Ref EvidentlyProjectName
         LoggingBucketName: !Ref LoggingBucketName
         
@@ -230,7 +227,6 @@ Resources:
         UserPoolId: !Ref UserPoolId
         UserPoolClientId: !Ref UserPoolClientId
         IdentityPoolId: !Ref IdentityPoolId
-        StackBucketName: !Ref StackBucketName
         Subnets: !Ref Subnets
         VpcId: !Ref VpcId
         VpcCidr: !Ref VpcCidr
@@ -241,9 +237,11 @@ Resources:
         ParameterOptimizelySdkKey: !Ref ParameterOptimizelySdkKey
         CleanupBucketLambdaArn: !Ref CleanupBucketLambdaArn
         DeleteRepositoryLambdaArn: !GetAtt DeleteRepositoryLambdaFunction.Arn
+        ProductsTable: !Ref ProductsTable
+        CategoriesTable: !Ref CategoriesTable
+        CartsTable: !Ref CartsTable
         WebRootUrl: !Ref WebRootUrl
         ImageRootUrl: !Ref ImageRootUrl
-        Uid: !Sub ${ParentStackName}-${AWS::Region}
         EvidentlyProjectName: !Ref EvidentlyProjectName
         LoggingBucketName: !Ref LoggingBucketName
         
@@ -264,7 +262,6 @@ Resources:
         UserPoolId: !Ref UserPoolId
         UserPoolClientId: !Ref UserPoolClientId
         IdentityPoolId: !Ref IdentityPoolId
-        StackBucketName: !Ref StackBucketName
         Subnets: !Ref Subnets
         VpcId: !Ref VpcId
         VpcCidr: !Ref VpcCidr
@@ -275,9 +272,9 @@ Resources:
         ParameterOptimizelySdkKey: !Ref ParameterOptimizelySdkKey
         CleanupBucketLambdaArn: !Ref CleanupBucketLambdaArn
         DeleteRepositoryLambdaArn: !GetAtt DeleteRepositoryLambdaFunction.Arn
+        OrdersTable: !Ref OrdersTable
         WebRootUrl: !Ref WebRootUrl
         ImageRootUrl: !Ref ImageRootUrl
-        Uid: !Sub ${ParentStackName}-${AWS::Region}
         EvidentlyProjectName: !Ref EvidentlyProjectName
         LoggingBucketName: !Ref LoggingBucketName
         
@@ -298,7 +295,6 @@ Resources:
         UserPoolId: !Ref UserPoolId
         UserPoolClientId: !Ref UserPoolClientId
         IdentityPoolId: !Ref IdentityPoolId
-        StackBucketName: !Ref StackBucketName
         Subnets: !Ref Subnets
         VpcId: !Ref VpcId
         VpcCidr: !Ref VpcCidr
@@ -312,7 +308,6 @@ Resources:
         DeleteRepositoryLambdaArn: !GetAtt DeleteRepositoryLambdaFunction.Arn
         WebRootUrl: !Ref WebRootUrl
         ImageRootUrl: !Ref ImageRootUrl
-        Uid: !Sub ${ParentStackName}-${AWS::Region}
         EvidentlyProjectName: !Ref EvidentlyProjectName
         LoggingBucketName: !Ref LoggingBucketName
 
@@ -333,7 +328,6 @@ Resources:
         UserPoolId: !Ref UserPoolId
         UserPoolClientId: !Ref UserPoolClientId
         IdentityPoolId: !Ref IdentityPoolId
-        StackBucketName: !Ref StackBucketName
         Subnets: !Ref Subnets
         VpcId: !Ref VpcId
         VpcCidr: !Ref VpcCidr
@@ -347,7 +341,6 @@ Resources:
         DeleteRepositoryLambdaArn: !GetAtt DeleteRepositoryLambdaFunction.Arn
         WebRootUrl: !Ref WebRootUrl
         ImageRootUrl: !Ref ImageRootUrl
-        Uid: !Sub ${ParentStackName}-${AWS::Region}
         EvidentlyProjectName: !Ref EvidentlyProjectName
         LoggingBucketName: !Ref LoggingBucketName
 
@@ -368,7 +361,6 @@ Resources:
         UserPoolId: !Ref UserPoolId
         UserPoolClientId: !Ref UserPoolClientId
         IdentityPoolId: !Ref IdentityPoolId
-        StackBucketName: !Ref StackBucketName
         Subnets: !Ref Subnets
         VpcId: !Ref VpcId
         VpcCidr: !Ref VpcCidr
@@ -382,7 +374,6 @@ Resources:
         DeleteRepositoryLambdaArn: !GetAtt DeleteRepositoryLambdaFunction.Arn
         WebRootUrl: !Ref WebRootUrl
         ImageRootUrl: !Ref ImageRootUrl
-        Uid: !Sub ${ParentStackName}-${AWS::Region}
         EvidentlyProjectName: !Ref EvidentlyProjectName
         LoggingBucketName: !Ref LoggingBucketName
 
@@ -403,7 +394,6 @@ Resources:
         UserPoolId: !Ref UserPoolId
         UserPoolClientId: !Ref UserPoolClientId
         IdentityPoolId: !Ref IdentityPoolId
-        StackBucketName: !Ref StackBucketName
         Subnets: !Ref Subnets
         VpcId: !Ref VpcId
         VpcCidr: !Ref VpcCidr
@@ -419,7 +409,6 @@ Resources:
         DeleteRepositoryLambdaArn: !GetAtt DeleteRepositoryLambdaFunction.Arn
         WebRootUrl: !Ref WebRootUrl
         ImageRootUrl: !Ref ImageRootUrl
-        Uid: !Sub ${ParentStackName}-${AWS::Region}
         EvidentlyProjectName: !Ref EvidentlyProjectName
         LoggingBucketName: !Ref LoggingBucketName
 
@@ -440,7 +429,6 @@ Resources:
         UserPoolId: !Ref UserPoolId
         UserPoolClientId: !Ref UserPoolClientId
         IdentityPoolId: !Ref IdentityPoolId
-        StackBucketName: !Ref StackBucketName
         Subnets: !Ref Subnets
         VpcId: !Ref VpcId
         VpcCidr: !Ref VpcCidr
@@ -455,7 +443,6 @@ Resources:
         UseDefaultIVSStreams: !If [UseDefaultIVSStreams, true, false]
         WebRootUrl: !Ref WebRootUrl
         ImageRootUrl: !Ref ImageRootUrl
-        Uid: !Sub ${ParentStackName}-${AWS::Region}
         EvidentlyProjectName: !Ref EvidentlyProjectName
         LoggingBucketName: !Ref LoggingBucketName
         
@@ -471,7 +458,7 @@ Resources:
         RecommendationsServiceDNSName: !GetAtt RecommendationsService.Outputs.ServiceDNSName
         OffersServiceDNSName: !GetAtt OffersService.Outputs.ServiceDNSName
         PinpointAppId: !Ref PinpointAppId
-        Uid: !Sub ${ParentStackName}-${AWS::Region}
+        Uid: !Sub ${AWS::StackName}-${AWS::Region}
         LambdaVpcSecurityGroup: !Ref LambdaVpcSecurityGroup
         LambdaVpcSubnets: !Ref Subnets
 

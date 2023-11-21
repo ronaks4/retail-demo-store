@@ -70,6 +70,11 @@ Metadata:
           - mParticleS2SSecretKey
           - GoogleAnalyticsMeasurementId
       - Label:
+          default: "Custom Cloudfront domain name (optional)"
+        Parameters:
+          - CloudfrontCustomDomain
+          - ACMCertificateArn
+      - Label:
           default: "Fenix Commerce EDD Integration"
         Parameters:
           - FenixZipDetectUrl
@@ -178,6 +183,17 @@ Parameters:
     Description: >
       Optional path in the Deployment Resources Staging bucket where the deployment resources are stored (e.g. path/path2/).
       Leave blank if resources are at the root of the Staging Resource Bucket. If specified, MUST end with '/'.
+
+  ResourceBucketImages:
+    Type: String
+    Description: >
+      (Leave empty in most cases) only specify if your product images are stored in a different bucket
+
+  ResourceBucketImagesPrefix:
+    Type: String
+    Description: >
+      (Leave empty in most cases) Images bucket prefix only specify if your product images are stored in a different bucket
+
 
   CreateOpenSearchServiceLinkedRole:
     Type: String
@@ -414,6 +430,16 @@ Parameters:
       Google Analytics Measurement Identifier (optional). If specified, the Google Analytics integration in the web application is activated and
       events are sent to the data stream associated with the Measurement ID.
 
+  ACMCertificateArn:
+    Type: String
+    Description: ACM Certificate ARN for CloudFront WebUICDN (Optional, only needed for custom domain in CloudFront)
+    Default: ''
+
+  CloudfrontCustomDomain:
+    Type: String
+    Description : OPTIONAL only enter if you plan to use a custom domain named (linked to ACMCertificateArn)
+    Default: ''
+
   FenixZipDetectUrl:
     Type: String
     Description: Fenix Commerce Zipcode Detect URL
@@ -429,7 +455,6 @@ Parameters:
     Type: String
     Description: Fenix Commerce Estimated Delivery Date Endpoint URL
     Default: 'https://platform.api.fenixcommerce.com/awsretaildemostore/fenixdelest/api/v2/deliveryestimates'
-
 
   FenixMonetaryValue:
     Type: String
@@ -489,6 +514,9 @@ Conditions:
 
   DeployAlexaEndpoint: !Not [!Equals [!Ref AlexaSkillId, ""]]
 
+  ConditionCustomDomain: !Not
+    - !Equals [!Ref CloudfrontCustomDomain, ""]
+
 Resources:
   # Base Resources
   Base:
@@ -515,14 +543,7 @@ Resources:
         LocationResourcePrefix: !Ref AWS::StackName
         GitHubUser: !Ref GitHubUser
         GitHubBranch: !Ref GitHubBranch
-        FenixZipDetectUrl: !Ref FenixZipDetectUrl
-        FenixTenantId: !Ref FenixTenantId
-        FenixEddEndpoint: !Ref FenixEddEndpoint
-        FenixMonetaryValue: !Ref FenixMonetaryValue
-        FenixEnabledPdp: !Ref FenixEnabledPdp
-        FenixEnabledCart: !Ref FenixEnabledCart
-        FenixEnabledCheckout: !Ref FenixEnabledCheckout
-        FenixXapiKey: !Ref FenixXapiKey
+        ACMCertificateArn: !Ref ACMCertificateArn
 
   # Services Resources
   Services:
@@ -540,7 +561,6 @@ Resources:
         UserPoolId: !GetAtt Base.Outputs.UserPoolId
         UserPoolClientId: !GetAtt Base.Outputs.UserPoolClientId
         IdentityPoolId: !GetAtt Base.Outputs.IdentityPoolId
-        StackBucketName: !GetAtt Base.Outputs.StackBucketName
         Subnets: !GetAtt Base.Outputs.Subnets
         VpcId: !GetAtt Base.Outputs.VpcId
         VpcCidr: !GetAtt Base.Outputs.VpcCidr
@@ -550,6 +570,8 @@ Resources:
         PinpointAppId: !GetAtt Base.Outputs.PinpointAppId
         ProductsTable: !GetAtt Base.Outputs.ProductsTable
         CategoriesTable: !GetAtt Base.Outputs.CategoriesTable
+        CartsTable: !GetAtt Base.Outputs.CartsTable
+        OrdersTable: !GetAtt Base.Outputs.OrdersTable
         ExperimentStrategyTable: !GetAtt Base.Outputs.ExperimentStrategyTable
         ParameterPersonalizeEventTrackerId: !GetAtt Base.Outputs.ParameterPersonalizeEventTrackerId
         ParameterAmplitudeApiKey: !GetAtt Base.Outputs.ParameterAmplitudeApiKey
@@ -561,7 +583,6 @@ Resources:
         ImageRootUrl: !Sub
           - "${RootURL}/images/"
           - RootURL: !GetAtt Base.Outputs.WebUICDNURL
-        ParentStackName: !Ref AWS::StackName
         EvidentlyProjectName: !GetAtt Base.Outputs.EvidentlyProjectName
         LoggingBucketName: !GetAtt Base.Outputs.LoggingBucketName
         LambdaVpcSecurityGroup: !GetAtt Base.Outputs.PrivateVPCSecurityGroup
@@ -643,6 +664,8 @@ Resources:
           - "${RootURL}/images/"
           - RootURL: !GetAtt Base.Outputs.WebUICDNURL
         LoggingBucketName: !GetAtt Base.Outputs.LoggingBucketName
+        ResourceBucketImages: !Ref ResourceBucketImages
+        ResourceBucketImagesPrefix: !Ref ResourceBucketImagesPrefix
 
   # Swagger UI Pipeline
   SwaggerUIPipeline:
@@ -650,8 +673,6 @@ Resources:
     Properties:
       TemplateURL: !Sub https://s3.amazonaws.com/${ResourceBucket}/${ResourceBucketRelativePath}cloudformation-templates/swagger-ui-pipeline.yaml
       Parameters:
-        ResourceBucket: !Ref ResourceBucket
-        ResourceBucketRelativePath: !Ref ResourceBucketRelativePath
         SwaggerUICDN: !GetAtt Base.Outputs.SwaggerUICDN
         SwaggerUIBucketName: !GetAtt Base.Outputs.SwaggerUIBucketName
         SwaggerUIRootUrl: !GetAtt Base.Outputs.SwaggerUICDNURL
@@ -703,7 +724,12 @@ Resources:
         OrdersServiceExternalUrl: !GetAtt Services.Outputs.OrdersServiceUrl
         OffersServiceExternalUrl: !GetAtt Services.Outputs.OffersServiceUrl
         UsersServiceExternalUrl: !GetAtt Services.Outputs.UsersServiceUrl
-        WebURL: !GetAtt Base.Outputs.WebUICDNURL
+        WebURL: 
+          !If [
+            ConditionCustomDomain,
+            CloudfrontCustomDomain,
+            !GetAtt Base.Outputs.WebUICDNURL
+          ]
         LambdaVpcSecurityGroup: !GetAtt Base.Outputs.PrivateVPCSecurityGroup
         LambdaVpcSubnets: !GetAtt Base.Outputs.Subnets
 
@@ -747,7 +773,6 @@ Resources:
 
   # Deployment support
   DeploymentSupport:
-    DependsOn: [Services, Base] # Delay towards end of deployment so that ES domain and DNS changes become consistent
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: !Sub https://s3.amazonaws.com/${ResourceBucket}/${ResourceBucketRelativePath}cloudformation-templates/deployment-support.yaml
@@ -917,6 +942,14 @@ Outputs:
         PRODUCT_SERVICE_HOST="${ApiGateway.Outputs.APIEndpoint}"
         OFFERS_SERVICE_HOST="${ApiGateway.Outputs.APIEndpoint}"
         AWS_XRAY_DAEMON_ADDRESS=xray:2000
+
+        # Carts service
+        CARTS_SERVICE_HOST="${ApiGateway.Outputs.APIEndpoint}"
+        DDB_TABLE_CARTS=${Base.Outputs.CartsTable}
+
+        # Orders service
+        ORDERS_SERVICE_HOST="${ApiGateway.Outputs.APIEndpoint}"
+        DDB_TABLE_ORDERS=${Base.Outputs.OrdersTable}
 
         # Search service
         OPENSEARCH_DOMAIN_SCHEME=https
